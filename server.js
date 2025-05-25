@@ -74,20 +74,26 @@ app.get('/', (req, res) => {
 });
 
 // API Endpoints
-app.post('/api/posts', upload.single('image'), async (req, res) => {
+app.post('/api/posts', async (req, res) => {
   try {
-    const { message } = req.body;
-    const imageFile = req.file;
+    const { message, image } = req.body;
 
     // Convert HTML content to formatted text
     const formattedMessage = convertHtmlToText(message);
 
-    if (imageFile) {
+    if (image) {
       // Create form data for image upload
       const formData = new FormData();
       formData.append('message', formattedMessage);
       formData.append('access_token', process.env.FACEBOOK_ACCESS_TOKEN);
-      formData.append('source', fs.createReadStream(imageFile.path));
+      
+      // Convert base64 to buffer
+      const base64Data = image.split(',')[1];
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      formData.append('source', imageBuffer, {
+        filename: 'image.jpg',
+        contentType: 'image/jpeg'
+      });
 
       const response = await axios.post(
         `https://graph.facebook.com/${process.env.FACEBOOK_PAGE_ID}/photos`,
@@ -98,9 +104,6 @@ app.post('/api/posts', upload.single('image'), async (req, res) => {
           },
         }
       );
-
-      // Clean up the uploaded file
-      fs.unlinkSync(imageFile.path);
       
       res.json({ success: true, data: response.data });
     } else {
@@ -115,10 +118,6 @@ app.post('/api/posts', upload.single('image'), async (req, res) => {
       res.json({ success: true, data: response.data });
     }
   } catch (error) {
-    // Clean up the uploaded file in case of error
-    if (req.file) {
-      fs.unlinkSync(req.file.path);
-    }
     res.status(500).json({ 
       success: false, 
       error: error.response?.data || error.message 

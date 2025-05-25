@@ -120,15 +120,25 @@
                 `;
                 postStatus.classList.remove('hidden');
 
-                const formData = new FormData();
-                formData.append('message', message);
+                let imageBase64 = null;
                 if (imageFile) {
-                    formData.append('image', imageFile);
+                    imageBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(imageFile);
+                    });
                 }
 
                 const response = await fetch('/api/posts', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message,
+                        image: imageBase64
+                    })
                 });
                 const data = await response.json();
 

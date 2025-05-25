@@ -6,7 +6,7 @@
 [dev]
   command = "npm run dev"
   port = 3000
-  targetPort = 3000
+  targetPort = 8888
   publish = "public"
   functions = "netlify/functions"
   functionsPort = 9999
