@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Page Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">Facebook Page Manager</h1>
+            <p class="text-gray-600">Create and manage your Facebook page posts</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Create Post Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Create New Post</h2>
+                <form id="postForm" class="space-y-4">
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                        <textarea
+                            id="message"
+                            name="message"
+                            rows="4"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="What's on your mind?"
+                            required
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label for="image" class="block text-sm font-medium text-gray-700 mb-2">Image (optional)</label>
+                        <div class="mt-1 flex items-center">
+                            <label class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                <span class="flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                                    <i class="fas fa-image mr-2"></i>
+                                    Choose Image
+                                </span>
+                                <input id="image" name="image" type="file" class="sr-only" accept="image/*">
+                            </label>
+                            <span id="imageName" class="ml-3 text-sm text-gray-500"></span>
+                        </div>
+                        <div id="imagePreview" class="mt-2 hidden">
+                            <img src="" alt="Preview" class="max-h-48 rounded-lg">
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                    >
+                        <i class="fas fa-paper-plane mr-2"></i>Post to Facebook
+                    </button>
+                </form>
+                <div id="postStatus" class="mt-4 hidden"></div>
+            </div>
+
+            <!-- Posts Feed Section -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Recent Posts</h2>
+                    <button
+                        id="refreshPosts"
+                        class="text-blue-600 hover:text-blue-700 focus:outline-none"
+                    >
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="postsFeed" class="space-y-4">
+                    <!-- Posts will be loaded here -->
+                    <div class="text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Loading posts...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Post creation
+        const postForm = document.getElementById('postForm');
+        const postStatus = document.getElementById('postStatus');
+        const postsFeed = document.getElementById('postsFeed');
+        const refreshButton = document.getElementById('refreshPosts');
+        const imageInput = document.getElementById('image');
+        const imageName = document.getElementById('imageName');
+        const imagePreview = document.getElementById('imagePreview');
+        const imagePreviewImg = imagePreview.querySelector('img');
+
+        // Image preview handling
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                imageName.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreviewImg.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imageName.textContent = '';
+                imagePreview.classList.add('hidden');
+            }
+        });
+
+        postForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            const imageFile = imageInput.files[0];
+            
+            try {
+                postStatus.innerHTML = `
+                    <div class="bg-blue-100 text-blue-700 p-4 rounded-md">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Posting...
+                    </div>
+                `;
+                postStatus.classList.remove('hidden');
+
+                const formData = new FormData();
+                formData.append('message', message);
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                const response = await fetch('/api/posts', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    postStatus.innerHTML = `
+                        <div class="bg-green-100 text-green-700 p-4 rounded-md">
+                            <i class="fas fa-check-circle mr-2"></i> Post created successfully!
+                        </div>
+                    `;
+                    postForm.reset();
+                    imagePreview.classList.add('hidden');
+                    imageName.textContent = '';
+                    loadPosts(); // Refresh the posts feed
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                postStatus.innerHTML = `
+                    <div class="bg-red-100 text-red-700 p-4 rounded-md">
+                        <i class="fas fa-exclamation-circle mr-2"></i> ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // Load posts
+        async function loadPosts() {
+            try {
+                const response = await fetch('/api/posts');
+                const data = await response.json();
+
+                if (data.success) {
+                    const posts = data.data.data;
+                    postsFeed.innerHTML = posts.length ? posts.map(post => {
+                        const hasImage = post.full_picture || (post.attachments?.data?.[0]?.media?.image?.src);
+                        const likesCount = post.likes?.summary?.total_count || 0;
+                        const comments = post.comments?.data || [];
+                        const commentsCount = comments.length;
+                        
+                        return `
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                ${post.message ? `<div class="text-gray-800 mb-2">${post.message}</div>` : ''}
+                                ${hasImage ? `
+                                    <div class="mt-2">
+                                        <img src="${post.full_picture || post.attachments.data[0].media.image.src}" 
+                                             alt="Post image" 
+                                             class="rounded-lg max-h-96 w-full object-cover">
+                                    </div>
+                                ` : ''}
+                                <div class="mt-2 flex items-center justify-between text-sm">
+                                    <div class="text-gray-500">
+                                        <i class="far fa-clock mr-1"></i>
+                                        ${new Date(post.created_time).toLocaleString()}
+                                    </div>
+                                    <div class="flex items-center space-x-4">
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-heart text-red-500 mr-1"></i>
+                                            <span>${likesCount} ${likesCount === 1 ? 'like' : 'likes'}</span>
+                                        </div>
+                                        <div class="flex items-center text-gray-600">
+                                            <i class="fas fa-comment text-blue-500 mr-1"></i>
+                                            <span>${commentsCount} ${commentsCount === 1 ? 'comment' : 'comments'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${commentsCount > 0 ? `
+                                    <div class="mt-4 border-t pt-4">
+                                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Comments</h3>
+                                        <div class="space-y-3">
+                                            ${comments.map(comment => {
+                                                const replies = comment.comments?.data || [];
+                                                const repliesCount = replies.length;
+                                                return `
+                                                    <div class="flex items-start space-x-3">
+                                                        <img src="${comment.from.picture.data.url}" 
+                                                             alt="${comment.from.name}" 
+                                                             class="w-8 h-8 rounded-full">
+                                                        <div class="flex-1">
+                                                            <div class="bg-gray-100 rounded-lg px-4 py-2">
+                                                                <div class="font-semibold text-sm">${comment.from.name}</div>
+                                                                <div class="text-gray-800">${comment.message}</div>
+                                                            </div>
+                                                            <div class="text-xs text-gray-500 mt-1">
+                                                                ${new Date(comment.created_time).toLocaleString()}
+                                                            </div>
+                                                            ${repliesCount > 0 ? `
+                                                                <div class="mt-2 ml-4 space-y-2">
+                                                                    ${replies.map(reply => `
+                                                                        <div class="flex items-start space-x-2">
+                                                                            <img src="${reply.from.picture.data.url}" 
+                                                                                 alt="${reply.from.name}" 
+                                                                                 class="w-6 h-6 rounded-full">
+                                                                            <div class="flex-1">
+                                                                                <div class="bg-gray-50 rounded-lg px-3 py-1.5">
+                                                                                    <div class="font-semibold text-xs">${reply.from.name}</div>
+                                                                                    <div class="text-gray-800 text-sm">${reply.message}</div>
+                                                                                </div>
+                                                                                <div class="text-xs text-gray-500 mt-0.5">
+                                                                                    ${new Date(reply.created_time).toLocaleString()}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    `).join('')}
+                                                                </div>
+                                                            ` : ''}
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('') : `
+                        <div class="text-center text-gray-500">
+                            <i class="fas fa-inbox text-2xl mb-2"></i>
+                            <p>No posts yet</p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                postsFeed.innerHTML = `
+                    <div class="bg-red-100 text-red-700 p-4 rounded-md">
+                        <i class="fas fa-exclamation-circle mr-2"></i> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Refresh posts
+        refreshButton.addEventListener('click', loadPosts);
+
+        // Initial load
+        loadPosts();
+    </script>
+</body>
+</html> 

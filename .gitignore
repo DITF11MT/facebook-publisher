@@ -1,2 +1,9 @@
-node_modules
+node_modules/
 .env
+.env.local
+.DS_Store
+netlify/functions/node_modules/
+uploads/
+dist/
+# Local Netlify folder
+.netlify
