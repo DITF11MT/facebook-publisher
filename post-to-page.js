@@ -1,10 +1,16 @@
 // post-to-page.js
+require('dotenv').config();
 const axios = require('axios');
 
-const PAGE_ID = '629500856922200';
-const ACCESS_TOKEN = 'EAAJ8djlT7LwBO8SwOcFlXJeeJU5lSWQW8fSemPqAtjZCTOn4u2aYQGaoj3vaNNBZBgfpZBVvvQYtRqnKjz4sHUIZA5iE8KZBbZAPH6SrQU9Thfsx0bw2wMKbR8OrR2s89aR2qXUqywhLsxpSICf83ZB82Wf3r65NuY5pK05PEcozGfc2vh0PusOzpXQUpxklURnbZC1bq6IoZCCzXVe62Yo1QUlzxzm1iFpj9RvoRABZAQhzHT';
+const PAGE_ID = process.env.FACEBOOK_PAGE_ID;
+const ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN;
 
-const message = '🚀 Hello from Mushi\'s Node.js script!';
+if (!PAGE_ID || !ACCESS_TOKEN) {
+  console.error('❌ Error: Missing environment variablesFACEBOOK_PAGE_ID. Please check your .env file.');
+  process.exit(1);
+}
+
+const message = '🚀 Hello from Mushi\'s Node.js SECOND POST FOR FUNscript!';
 
 async function postToPage() {
   try {
